@@ -22,6 +22,10 @@
 
 #define STOP_DISTANCE 40
 
+#define DEFAULT_SPEED 75
+
+#define FULL_TURN_DURATION_MILLIS 3400
+
 struct Motor {
   const int pinA;
   const int pinB;
@@ -79,7 +83,7 @@ void loop() {
     stop();
   }
   else {
-    setSpeed(75);
+    setSpeed(DEFAULT_SPEED);
     driveForward();
   }
 }
@@ -137,4 +141,30 @@ void setSpeed(int speedPercentage) {
 void setSpeed(Motor motor, int speedPercentage) {
   int pwmValue = map(speedPercentage, 0, 100, MOTOR_MIN_PWM, MOTOR_MAX_PWM);
   analogWrite(motor.pinPwm, pwmValue);
+}
+
+void turnLeft(int angle) {
+  setSpeed(DEFAULT_SPEED);
+  
+  driveForward(motorRightFront);
+  driveForward(motorRightBack);
+  driveBackwards(motorLeftFront);
+  driveBackwards(motorLeftBack);  
+
+  delay(FULL_TURN_DURATION_MILLIS * (angle / (float)360));  
+
+  stop();
+}
+
+void turnRight(int angle) {
+  setSpeed(DEFAULT_SPEED);
+  
+  driveBackwards(motorRightFront);
+  driveBackwards(motorRightBack);
+  driveForward(motorLeftFront);
+  driveForward(motorLeftBack);  
+
+  delay(FULL_TURN_DURATION_MILLIS * (angle / (float)360));  
+
+  stop();
 }
