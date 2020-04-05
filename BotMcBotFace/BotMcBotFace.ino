@@ -20,22 +20,30 @@
 #define SONIC_TRIGGER 5
 #define SONIC_ECHO 6
 
-#define STOP_DISTANCE 40
+#define STOP_DISTANCE 200
 
-#define DEFAULT_SPEED 75
+#define DEFAULT_SPEED 65
 
 #define FULL_TURN_DURATION_MILLIS 3400
 
+#define CLOCKWISE 1
+#define COUNTERCLOCKWISE 2
+#define DIRECTION_CHANGE_CHANCE 25
+
+#define EVADE_ANGLE_MAX 180
+#define EVADE_ANGLE_MIN 45
+#define EVADE_ANGLE_DIFF 180 - 45
+
 struct Motor {
-  const int pinA;
-  const int pinB;
-  const int pinPwm;
+  const byte pinA;
+  const byte pinB;
+  const byte pinPwm;
   const bool flipped;
 };
 
 struct Sonic {
-  const int pinTrigger;
-  const int pinEcho;
+  const byte pinTrigger;
+  const byte pinEcho;
 };
 
 struct SonicValues {
@@ -53,8 +61,13 @@ const Motor motors[4] = { motorLeftFront, motorLeftBack, motorRightFront, motorR
 const Sonic sonic = { SONIC_TRIGGER, SONIC_ECHO };
 SonicValues sonicValues = { -1, -1 };
 
+byte evadeDirection = CLOCKWISE;
+short evadeAngle = -1;
+
 void setup() {
   Serial.begin(9600);
+
+  randomSeed(analogRead(0));
   
   setupMotor(motorLeftFront);
   setupMotor(motorLeftBack);
@@ -80,7 +93,7 @@ void loop() {
   measureDistance(sonic, sonicValues);
 
   if(sonicValues.distance < 15) {
-    stop();
+    evade();
   }
   else {
     setSpeed(DEFAULT_SPEED);
@@ -132,18 +145,18 @@ void stop(Motor motor) {
   digitalWrite(motor.pinB, LOW);
 }
 
-void setSpeed(int speedPercentage) {
+void setSpeed(byte speedPercentage) {
   for(Motor motor : motors) {
     setSpeed(motor, speedPercentage);
   }
 }
 
-void setSpeed(Motor motor, int speedPercentage) {
+void setSpeed(Motor motor, byte speedPercentage) {
   int pwmValue = map(speedPercentage, 0, 100, MOTOR_MIN_PWM, MOTOR_MAX_PWM);
   analogWrite(motor.pinPwm, pwmValue);
 }
 
-void turnLeft(int angle) {
+void turnLeft(short angle) {
   setSpeed(DEFAULT_SPEED);
   
   driveForward(motorRightFront);
@@ -156,7 +169,7 @@ void turnLeft(int angle) {
   stop();
 }
 
-void turnRight(int angle) {
+void turnRight(short angle) {
   setSpeed(DEFAULT_SPEED);
   
   driveBackwards(motorRightFront);
@@ -167,4 +180,18 @@ void turnRight(int angle) {
   delay(FULL_TURN_DURATION_MILLIS * (angle / (float)360));  
 
   stop();
+}
+
+void evade() {
+  if(random(100) < DIRECTION_CHANGE_CHANCE) {
+    evadeDirection = evadeDirection == CLOCKWISE ? COUNTERCLOCKWISE : CLOCKWISE;
+  }
+
+  evadeAngle = random(EVADE_ANGLE_DIFF) + EVADE_ANGLE_MIN;
+  if(evadeDirection == CLOCKWISE) {
+    turnRight(evadeAngle);
+  }
+  else {
+    turnLeft(evadeAngle);
+  }
 }
